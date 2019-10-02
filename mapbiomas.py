@@ -21,8 +21,8 @@ email                : motta.luiz@gmail.com
 """
 import json, os
 
-from qgis.PyQt.QtCore import QObject, pyqtSlot, pyqtSignal
-from qgis.PyQt.QtGui import QPixmap, QIcon
+from qgis.PyQt.QtCore import QObject, pyqtSlot, pyqtSignal, QUrl
+from qgis.PyQt.QtGui import QPixmap, QIcon, QDesktopServices
 from qgis.PyQt.QtWidgets import QApplication,QDialog
 
 from qgis.core import (
@@ -42,7 +42,7 @@ class AlertMapBiomas(QObject):
         self.action = action
         self.msgBar = iface.messageBar()
         self.iconApply = action.icon()
-        self.iconCancel = QIcon( os.path.join( os.path.dirname(__file__), 'mapbiomas_cancel.svg' ) )
+        self.iconCancel = QIcon( os.path.join( os.path.dirname(__file__), 'mapbiomas_alerta_cancel.png' ) )
         self.currentProcess = None
         self.isRunning = False
         self._connect()
@@ -121,7 +121,7 @@ class MapBiomas(QObject):
         self.layerTreeRoot = self.project.layerTreeRoot()
         self.mapCanvasGeom = MapCanvasGeometry()
         self.pluginName = 'MapBiomas'
-        self.crsCatalog = QgsCoordinateReferenceSystem('EPSG:4326')
+        self.crsCatalog = QgsCoordinateReferenceSystem('EPSG:4674')
         self.styleFile = 'mb_alert.qml'
         self.alert = None
         self.alert_id = None
@@ -132,76 +132,17 @@ class MapBiomas(QObject):
         self.killProcess.disconnect( self.apiMB.kill )
 
     def _createCatalog(self):
-        def setForm(layer):
-            config = layer.editFormConfig ()
-            vfile = os.path.join( os.path.dirname( __file__ ), 'form.ui' )
-            config.setUiForm( vfile)
-            config.setInitCodeSource( config.CodeSourceFile )
-            config.setInitFunction('loadForm')
-            vfile = os.path.join( os.path.dirname( __file__ ), 'form.py' )
-            config.setInitFilePath( vfile)
-            layer.setEditFormConfig(config)        
-
-        l_fields = [ "field={key}:{value}".format( key=k, value=self.apiMB.fieldsDef[ k ] ) for k in self.apiMB.fields ]
+        key_value = lambda k: "field={key}:{value}".format( key=k, value=self.apiMB.fields[ k ]['definition'] )
+        l_fields = [ key_value( k ) for k in self.apiMB.fields.keys() ]
         l_fields.insert( 0, "Multipolygon?crs={}".format( self.crsCatalog.authid().lower() ) )
         l_fields.append('index=yes')
         uri = '&'.join( l_fields )
         self.alert = QgsVectorLayer( uri, self.nameCatalog, 'memory' )
         self.alert.loadNamedStyle( os.path.join( os.path.dirname( __file__ ), self.styleFile ) )
-        setForm( self.alert )
         self.alert_id = self.alert.id()
 
     def _responseFinished(self, response):
         self.response = response
-
-    def populateForm(self, widgets, feature):
-        """
-        Populate widgets from 'form.py'
-
-        :param widgets: List fo widgets('form.py')
-        :feature: Feature from open table(Form) in QGIS
-        """
-        def setErrorMessage(widget, msg):
-            widget.setText( msg )
-            widget.setStyleSheet('color: red')
-
-        # Clean
-        widgets['message_status'].setStyleSheet('color: black')
-        for name in ('message_status', 'before_thumbnail', 'after_thumbnail'):
-            widgets[ name ].setText('')
-
-        # Populate - widgets = forms.py, features = self.apiMB.fields
-        # 'alert_id', 'validation_date',
-        # 'before_image_date', 'before_image_id',
-        # 'after_image_date', 'after_image_id',
-        # 'geom_area_ha'
-        name = 'alert_id'
-        widgets[ name ].setText( str( feature[ name ] ) )
-        name = 'validation_date'
-        widgets[ name ].setText( feature[ name ] )
-        name = 'geom_area_ha'
-        widgets[ name ].setText("{0:.2f}".format( feature[ name ] ) )
-
-        names = ( 'before', 'after' )
-        namesWidget = { 'before': 'before_image', 'after': 'after_image' }
-        valuesWidget = {
-            'before': "id: {} - date: {}".format( feature['before_image_id'], feature['before_image_date'] ),
-            'after': "id: {} - date: {}".format( feature['after_image_id'], feature['after_image_date'] ),
-        }
-        for name in names:
-            widgets[ namesWidget[ name ] ].setText( valuesWidget[ name ] )
-
-        # Populate 'thumbnail'
-        widgets['message_status'].setText("Fetching thumbnails...")
-        urls = API_Mapbiomas.getUrlThumbnails( feature['alert_id'] )
-        for name in ('before', 'after' ):
-            self.apiMB.getThumbnail( urls[ name ], self._responseFinished )
-            widget = widgets["{}_thumbnail".format( name ) ]
-            if not self.response['isOk']:
-                setErrorMessage( widget, self.response['message'] )
-                continue
-            widget.setPixmap( self.response['thumbnail'] )
-        widgets['message_status'].setText('')
 
     def actionsForm(self, nameAction, feature_id=None):
         """
@@ -222,9 +163,23 @@ class MapBiomas(QObject):
             self.mapCanvasGeom.zoom( self.alert, geom )
             return { 'isOk': True }
 
+        def report(feature_id):
+            feat =  self.alert.getFeature( feature_id )
+            alerta_id = feat['alerta_id']
+            cars_ids = feat['cars_ids']
+            if len(cars_ids) == 0:
+                url = "{}/{}".format( API_Mapbiomas.urlReport, alerta_id )
+                QDesktopServices.openUrl( QUrl( url ) )
+            else:
+                for car_id in cars_ids.split('\n'):
+                    url = "{}/{}/car/{}".format( API_Mapbiomas.urlReport, alerta_id, car_id )
+                    QDesktopServices.openUrl( QUrl( url ) )
+            return { 'isOk': True }
+
         actionsFunc = {
             'highlight': highlight,
-            'zoom':      zoom
+            'zoom':      zoom,
+            'report':    report
         }
         if not nameAction in actionsFunc.keys():
             return { 'isOk': False, 'message': "Missing action '{}'".format( nameAction ) }

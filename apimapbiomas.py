@@ -36,25 +36,22 @@ from qgis.core import (
 from .accesssite import AccessSite
 
 class API_Mapbiomas(QObject):
-    urlThumbnail = 'https://storage.googleapis.com/mapbiomas/alerta/cache/validated_alert_{alert_id}_{before_after}_.png'
     urlGeoserver = 'http://geoserver-mapbiomas.terras.agr.br/geoserver/alerts-platform/ows'
+    urlReport = 'http://plataforma.alerta.mapbiomas.org/reports'
     def __init__(self):
         super().__init__()
         self.access = AccessSite()
-        self.fields = [ 
-            'alert_id', 'validation_date',
-            'before_image_date', 'before_image_id',
-            'after_image_date', 'after_image_id',
-            'geom_area_ha'
-        ]
-        self.fieldsDef = {
-            'alert_id': 'int(-1)',
-            'validation_date': 'string(15)',
-            'before_image_date': 'string(15)',
-            'before_image_id': 'string(50)',
-            'after_image_date': 'string(15)',
-            'after_image_id': 'string(50)',
-            'geom_area_ha': 'double'
+        self.fields = {
+            'alerta_id': {'definition': 'int(-1)'},
+            'dt_validacao':  {'definition': 'string(10)'},
+            'fontes': {'definition': 'string(100)'},
+            'dt_antes': {'definition': 'string(10)'},
+            'img_antes': {'definition': 'string(150)'},
+            'dt_depois': {'definition': 'string(10)'},
+            'img_depois': {'definition': 'string(150)'},
+            'cars_ids': {'definition': 'string(150)'},
+            'cars_qtd': {'definition': 'int(-1)'},
+            'area_ha': {'definition': 'double'}
         }
 
     def _addFeaturesLinkResponse(self, response):
@@ -85,18 +82,15 @@ class API_Mapbiomas(QObject):
                     return features
                 geom = getGeometry( feat['geometry'] )
                 del feat['geometry']
-                alert_id = feat['properties']['alert_id']
-                metadata = json.loads( feat['properties']['metadata'] )
-                item = {
-                    'alert_id': alert_id,
-                    'validation_date': metadata['validation_date'],
-                    'before_image_date': metadata['before_image_date'],
-                    'before_image_id': metadata['before_image_id'],
-                    'after_image_date': metadata['after_image_date'],
-                    'after_image_id': metadata['after_image_id'],
-                    'geom_area_ha': metadata['geom_area_ha'],
-                    'geometry': geom
-                }
+                properties = feat['properties']
+                item = {}
+                for k in self.fields.keys():
+                    item[ k ] = properties[ k ]
+                if not item['cars_ids'] is None:
+                    item['cars_ids'] = item['cars_ids'].replace(';', '\n')
+                else:
+                    item['cars_ids'] = ''
+                item['geometry'] = geom
                 features.append( item )
             return features
 
@@ -120,9 +114,6 @@ class API_Mapbiomas(QObject):
         }
         self.access.requestUrl( p, self._addFeaturesLinkResponse, setFinished )
 
-    def getThumbnail(self, url, setFinished):
-        self.access.getThumbnail( url, setFinished )
-
     @pyqtSlot()
     def kill(self):
         self.access.isKill = True
@@ -134,16 +125,9 @@ class API_Mapbiomas(QObject):
             'service': 'WFS',
             'version': '1.0.0',
             'request': 'GetFeature',
-            'typeName': 'alerts-platform:validated_alerts',
+            'typeName': 'alerts-platform:viw_relatorio_validacao',
             'outputFormat': 'application/json',
             'cql_filter': "INTERSECTS(geom,{})".format( wktGeom )
         }
         params = '&'.join( [ "{k}={v}".format( k=k, v=params[ k ] ) for k in params.keys() ] )
         return "{url}?{params}".format( url=API_Mapbiomas.urlGeoserver, params=params )
-
-    @staticmethod
-    def getUrlThumbnails(alert_id):
-        return {
-            'before': API_Mapbiomas.urlThumbnail.format( alert_id=alert_id, before_after='before' ),
-            'after': API_Mapbiomas.urlThumbnail.format( alert_id=alert_id, before_after='after' )
-        }

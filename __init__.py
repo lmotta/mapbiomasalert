@@ -46,7 +46,7 @@ class AlertMBPlugin(QObject):
     def initGui(self):
         name = 'Alert MapBiomas'
         about = 'Alert MapBiomas'
-        icon = QIcon( os.path.join( os.path.dirname(__file__), 'mapbiomas.svg' ) )
+        icon = QIcon( os.path.join( os.path.dirname(__file__), 'mapbiomas_alerta.png' ) )
         self.action = QAction( icon, name, self.iface.mainWindow() )
         self.action.setObjectName( name.replace(' ', '') )
         self.action.setWhatsThis( about )
