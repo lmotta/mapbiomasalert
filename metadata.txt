@@ -1,5 +1,5 @@
 [general]
-name:Alert MapBiomas
+name:MapBiomas Alert
 description:This plugin lets you get alert from MapBiomas Project(http://alerta.mapbiomas.org/).
 
 version:0.1
@@ -10,13 +10,13 @@ email:motta.luiz@gmail.com
 
 category:Plugin
 
-tags:MapBiomas,IBAMA
+tags:MapBiomas Alert,
 
-homepage:https://github.com/lmotta/alertmapbiomas/wiki
-tracker:https://github.com/lmotta/alertmapbiomas/issues
-repository:https://github.com/alertmapbiomas
+homepage:https://github.com/lmotta/mapbiomasalert/wiki
+tracker:https://github.com/lmotta/mapbiomasalert/issues
+repository:https://github.com/mapbiomasalert
 
-icon:mapbiomas.svg
+icon:mapbiomas_alert.png
 
 experimental:True
 deprecated:False

@@ -29,8 +29,7 @@ from qgis.PyQt.QtGui import QColor
 
 from qgis import utils as QgsUtils
 from qgis.core import QgsProject, QgsCoordinateTransform, QgsFeature
-from qgis.gui import QgsHighlight
-
+from qgis.gui import QgsHighlight, QgsRubberBand
 
 
 class  MapCanvasGeometry():
@@ -38,37 +37,49 @@ class  MapCanvasGeometry():
         self.project = QgsProject().instance()
         self.canvas = QgsUtils.iface.mapCanvas()
         self.timer = QTimer( self.canvas )
-        self.flash = None
+        self.canvasItem = None
+        self.layer = None
 
-    def highlight(self, layer, geom):
-        def getFlash():
-            h = QgsHighlight( self.canvas, geom, layer )
-            h.setColor(     QColor( 255, 0, 0, 255 ) )
-            h.setFillColor( QColor( 255, 0, 0, 100 ) )
-            h.setWidth( 2 )
-            return h
+    def _setCanvasItem(self):
+        self.canvasItem.setColor(     QColor(255, 0, 0, 255))
+        self.canvasItem.setFillColor( QColor(119,136,153, 100))
+        self.canvasItem.setWidth(2)
 
+    def _flash(self, milliseconds):
         def finished():
             self.timer.stop()
             self.timer.timeout.disconnect( finished )
-            del self.flash
+            if self.layer is None:
+                self.canvasItem.reset( self.geometryType )
+            del self.canvasItem
+            self.layer = None
+            self.canvasItem = None
+            self.geometryType = None
 
-        self.flash = getFlash()
         self.timer.timeout.connect( finished )
-        self.timer.start( 500 ) # Milliseconds before finishing the flash
+        self.timer.start( milliseconds )
 
-    def zoom(self, layer, geom):
-        def getBoudingBoxGeomCanvas():
+    def highlight(self, geometry, layer=None):
+        if layer is None:
+            self.geometryType = geometry.type()
+            self.canvasItem = QgsRubberBand( self.canvas, self.geometryType )
+            self._setCanvasItem()
+            self.canvasItem.addGeometry( geometry )
+        else:
+            self.canvasItem = QgsHighlight( self.canvas, geometry, layer )
+            self._setCanvasItem()
+        self.layer = layer
+        self._flash( 500 )
+
+    def zoom(self, geometry, layer=None):
+        bbox = geometry.boundingBox()
+        if not layer is None:
             crsLayer = layer.crs()
             crsCanvas = self.project.crs()
             if not crsLayer == crsCanvas:
                 ct = QgsCoordinateTransform( layer.crs(), self.project.crs(), self.project )
-                bbox = ct.transform( geom.boundingBox() )
-            else:
-                bbox = geom.boundingBox()
-            return bbox
-
-        self.canvas.setExtent( getBoudingBoxGeomCanvas() )
+                bbox = ct.transform( geometry.boundingBox() )
+        self.canvas.setExtent( bbox )
         self.canvas.zoomByFactor( 1.05 )
         self.canvas.refresh()
-        self.highlight( layer, geom )
+        self.highlight( geometry, layer )

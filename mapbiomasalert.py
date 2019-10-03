@@ -2,8 +2,8 @@
 # # -*- coding: utf-8 -*-
 """
 /***************************************************************************
-Name                 : MapBiomas
-Description          : Class for work with MapBiomas
+Name                 : MapBiomas Alert
+Description          : Class for work with MapBiomas Alert
 Date                 : April, 2019
 copyright            : (C) 2019 by Luiz Motta
 email                : motta.luiz@gmail.com
@@ -28,21 +28,23 @@ from qgis.PyQt.QtWidgets import QApplication,QDialog
 from qgis.core import (
     Qgis, QgsProject,
     QgsCoordinateReferenceSystem, QgsCoordinateTransform,
-    QgsVectorLayer, QgsFeature
+    QgsVectorLayer, QgsFeature, QgsGeometry
 )
 
-from .apimapbiomas import API_Mapbiomas
+from .apimapbiomasalert import API_MapbiomasAlert
 from .mapcanvaseffects import MapCanvasGeometry
 
-class AlertMapBiomas(QObject):
+class MapBiomasAlert(QObject):
     cancelSearch = pyqtSignal()
     def __init__(self, iface, action):
         super().__init__()
-        self.mb = MapBiomas(iface)
-        self.action = action
+        self.canvas = iface.mapCanvas()
         self.msgBar = iface.messageBar()
+        self.action = action
         self.iconApply = action.icon()
-        self.iconCancel = QIcon( os.path.join( os.path.dirname(__file__), 'mapbiomas_alerta_cancel.png' ) )
+        self.mbr = MapBiomasAlertRequest( self.canvas )
+        self.mapCanvasGeom = MapCanvasGeometry()
+        self.iconCancel = QIcon( os.path.join( os.path.dirname(__file__), 'mapbiomas_alert_cancel.png' ) )
         self.currentProcess = None
         self.isRunning = False
         self._connect()
@@ -54,10 +56,11 @@ class AlertMapBiomas(QObject):
 
     def _connect(self, isConnect = True):
         ss = [
-            { 'signal': self.cancelSearch, 'slot': self.mb.onCancel },
-            { 'signal': self.mb.currentProcess, 'slot': self.setCurrentProcess },
-            { 'signal': self.mb.finishedProcess, 'slot': self.finishedSearch },
-            { 'signal': self.mb.message, 'slot': self.message }
+            { 'signal': self.cancelSearch, 'slot': self.mbr.onCancel },
+            { 'signal': self.mbr.currentProcess, 'slot': self.setCurrentProcess },
+            { 'signal': self.mbr.showExtentProcess, 'slot': self.showExtentProcess },
+            { 'signal': self.mbr.finishedProcess, 'slot': self.finishedSearch },
+            { 'signal': self.mbr.message, 'slot': self.message }
         ]
         if isConnect:
             self.hasConnect = True
@@ -78,11 +81,16 @@ class AlertMapBiomas(QObject):
             return
         self.isRunning = True
         self._changeIcon()
-        self.mb.searchAlert()
+        self.mbr.searchAlert()
 
     @pyqtSlot(str)
     def setCurrentProcess(self, name):
         self.currentProcess = name
+
+    @pyqtSlot()
+    def showExtentProcess(self):
+        geomExtent = QgsGeometry.fromRect( self.canvas.extent() )
+        self.mapCanvasGeom.zoom( geomExtent )
 
     @pyqtSlot()
     def finishedSearch(self):
@@ -105,24 +113,24 @@ class AlertMapBiomas(QObject):
         f( self.currentProcess, message )
 
 
-class MapBiomas(QObject):
+class MapBiomasAlertRequest(QObject):
     killProcess = pyqtSignal()
     currentProcess = pyqtSignal(str)
     finishedProcess = pyqtSignal()
+    showExtentProcess = pyqtSignal()
     message = pyqtSignal(Qgis.MessageLevel, str)
-    def __init__(self, iface):
+    def __init__(self, canvas):
         super().__init__()
-        self.iface = iface
         self.nameCatalog = 'mapbiomas_alert_valid'
-        self.apiMB = API_Mapbiomas()
+        self.apiMB = API_MapbiomasAlert()
         self.killProcess.connect( self.apiMB.kill )
-        self.canvas = iface.mapCanvas()
+        self.canvas = canvas
         self.project = QgsProject.instance()
         self.layerTreeRoot = self.project.layerTreeRoot()
         self.mapCanvasGeom = MapCanvasGeometry()
         self.pluginName = 'MapBiomas'
         self.crsCatalog = QgsCoordinateReferenceSystem('EPSG:4674')
-        self.styleFile = 'mb_alert.qml'
+        self.styleFile = 'mapbiomas_alert.qml'
         self.alert = None
         self.alert_id = None
         self.response = None
@@ -150,17 +158,16 @@ class MapBiomas(QObject):
 
         :param nameAction: Name of action
         :params feature_id: Feature ID
-        :meta_json: Value of JSON(dictionary) from name_exp_json
         """
         # Actions functions
         def highlight(feature_id):
             geom = self.alert.getFeature( feature_id ).geometry()
-            self.mapCanvasGeom.highlight( self.alert, geom )
+            self.mapCanvasGeom.highlight( geom, self.alert )
             return { 'isOk': True }
 
         def zoom(feature_id):
             geom = self.alert.getFeature( feature_id ).geometry()
-            self.mapCanvasGeom.zoom( self.alert, geom )
+            self.mapCanvasGeom.zoom( geom, self.alert )
             return { 'isOk': True }
 
         def report(feature_id):
@@ -168,11 +175,11 @@ class MapBiomas(QObject):
             alerta_id = feat['alerta_id']
             cars_ids = feat['cars_ids']
             if len(cars_ids) == 0:
-                url = "{}/{}".format( API_Mapbiomas.urlReport, alerta_id )
+                url = "{}/{}".format( API_MapbiomasAlert.urlReport, alerta_id )
                 QDesktopServices.openUrl( QUrl( url ) )
             else:
                 for car_id in cars_ids.split('\n'):
-                    url = "{}/{}/car/{}".format( API_Mapbiomas.urlReport, alerta_id, car_id )
+                    url = "{}/{}/car/{}".format( API_MapbiomasAlert.urlReport, alerta_id, car_id )
                     QDesktopServices.openUrl( QUrl( url ) )
             return { 'isOk': True }
 
@@ -189,8 +196,8 @@ class MapBiomas(QObject):
         def getWktExtent():
             crsCanvas = self.canvas.mapSettings().destinationCrs()
             ct = QgsCoordinateTransform( crsCanvas, self.crsCatalog, self.project )
-            rectCanvas = self.canvas.extent() if crsCanvas == self.crsCatalog else ct.transform( self.canvas.extent() )
-            return rectCanvas.asWktPolygon()
+            extent = self.canvas.extent() if crsCanvas == self.crsCatalog else ct.transform( self.canvas.extent() )
+            return extent.asWktPolygon()
         
         def populate(features):
             provider = self.alert.dataProvider()
@@ -260,11 +267,12 @@ class MapBiomas(QObject):
             return
 
         self.currentProcess.emit('Search alerts')
-        if self.iface.mapCanvas().layerCount() == 0:
+        if self.canvas.layerCount() == 0:
             msg = 'Need layer(s) in map'
             self.message.emit( Qgis.Warning, msg )
         else:
             self.apiMB.access.isKill = False
+            self.showExtentProcess.emit()
             self.requestPopulateCatalog()
         self.finishedProcess.emit()
 

@@ -2,8 +2,8 @@
 # # -*- coding: utf-8 -*-
 """
 /***************************************************************************
-Name                 : Qt API for Alert MapBiomas
-Description          : API for MapBiomas
+Name                 : Qt API for MapBiomas Alert
+Description          : API for MapBiomas Alert
 Date                 : April, 2019
 copyright            : (C) 2019 by Luiz Motta
 email                : motta.luiz@gmail.com
@@ -35,7 +35,7 @@ from qgis.core import (
 
 from .accesssite import AccessSite
 
-class API_Mapbiomas(QObject):
+class API_MapbiomasAlert(QObject):
     urlGeoserver = 'http://geoserver-mapbiomas.terras.agr.br/geoserver/alerts-platform/ows'
     urlReport = 'http://plataforma.alerta.mapbiomas.org/reports'
     def __init__(self):
@@ -130,4 +130,4 @@ class API_Mapbiomas(QObject):
             'cql_filter': "INTERSECTS(geom,{})".format( wktGeom )
         }
         params = '&'.join( [ "{k}={v}".format( k=k, v=params[ k ] ) for k in params.keys() ] )
-        return "{url}?{params}".format( url=API_Mapbiomas.urlGeoserver, params=params )
+        return "{url}?{params}".format( url=API_MapbiomasAlert.urlGeoserver, params=params )
