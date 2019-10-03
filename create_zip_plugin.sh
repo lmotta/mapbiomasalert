@@ -6,7 +6,7 @@ fi
 mkdir "./$plugin_dir"
 cp *.py "./$plugin_dir"
 cp *.png "./$plugin_dir"
-for item in metadata.txt LICENSE mb_alert.qml; do cp "./$item" "./$plugin_dir"; done
+for item in metadata.txt LICENSE *.qml; do cp "./$item" "./$plugin_dir"; done
 zip -r $plugin_dir $plugin_dir
 rm -r $plugin_dir
 #
