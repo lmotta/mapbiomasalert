@@ -14,7 +14,7 @@ tags:MapBiomas, Alert
 
 homepage:https://github.com/lmotta/mapbiomasalert/wiki
 tracker:https://github.com/lmotta/mapbiomasalert/issues
-repository:https://github.com/mapbiomasalert
+repository:https://github.com/lmotta/mapbiomasalert
 
 icon:mapbiomas_alert.png
 
