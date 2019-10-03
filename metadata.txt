@@ -10,7 +10,7 @@ email:motta.luiz@gmail.com
 
 category:Plugin
 
-tags:MapBiomas Alert,
+tags:MapBiomas, Alert
 
 homepage:https://github.com/lmotta/mapbiomasalert/wiki
 tracker:https://github.com/lmotta/mapbiomasalert/issues
