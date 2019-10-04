@@ -12,5 +12,8 @@ This plugin lets you get alert from MapBiomas Project.
 Luiz Motta
 
 ## Changelog
+- 2019-10-04
+Added minimum version to 3.4.12
 - 2019-10-03
 Start of plugin
+
