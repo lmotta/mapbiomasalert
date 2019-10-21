@@ -173,7 +173,7 @@ class MapBiomasAlertRequest(QObject):
         def report(feature_id):
             feat =  self.alert.getFeature( feature_id )
             alerta_id = feat['alerta_id']
-            cars_ids = feat['cars_ids']
+            cars_ids = feat['cars']
             if len(cars_ids) == 0:
                 url = "{}/{}".format( API_MapbiomasAlert.urlReport, alerta_id )
                 QDesktopServices.openUrl( QUrl( url ) )

@@ -49,7 +49,7 @@ class API_MapbiomasAlert(QObject):
             'img_antes': {'definition': 'string(150)'},
             'dt_depois': {'definition': 'string(10)'},
             'img_depois': {'definition': 'string(150)'},
-            'cars_ids': {'definition': 'string(150)'},
+            'cars': {'definition': 'string(150)'},
             'cars_qtd': {'definition': 'int(-1)'},
             'area_ha': {'definition': 'double'}
         }
@@ -86,10 +86,10 @@ class API_MapbiomasAlert(QObject):
                 item = {}
                 for k in self.fields.keys():
                     item[ k ] = properties[ k ]
-                if not item['cars_ids'] is None:
-                    item['cars_ids'] = item['cars_ids'].replace(';', '\n')
+                if not item['cars'] is None:
+                    item['cars'] = item['cars'].replace(';', '\n')
                 else:
-                    item['cars_ids'] = ''
+                    item['cars'] = ''
                 item['geometry'] = geom
                 features.append( item )
             return features

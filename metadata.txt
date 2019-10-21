@@ -2,10 +2,9 @@
 name:MapBiomas Alert
 description:This plugin lets you get alert from MapBiomas Project(http://alerta.mapbiomas.org/).
 about:This plugin lets you get alert from MapBiomas Project(http://alerta.mapbiomas.org/).
-  *** The minimum version for this Plugin is the 3.4.12 ***
 
 version:0.1.1
-qgisMinimumVersion:3.4.12
+qgisMinimumVersion:3.4
 
 author:Luiz Motta
 email:motta.luiz@gmail.com
@@ -23,8 +22,7 @@ icon:mapbiomas_alert.png
 experimental:True
 deprecated:False
 
-changelog: 0.1.1(2019-10-04)
-  Added minimum version to 3.4.12
-  - 0.1(2019-04-03)
-  Started Plugin
-  
+changelog: 0.1.1(2019-10-21)
+  Change cars_id to cars
+  - 0.1(2019-04-11)
+  Start of plugin
