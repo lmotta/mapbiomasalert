@@ -3,7 +3,7 @@ name:MapBiomas Alert
 description:This plugin lets you get alert from MapBiomas Project(http://alerta.mapbiomas.org/).
 about:This plugin lets you get alert from MapBiomas Project(http://alerta.mapbiomas.org/).
 
-version:0.1.1
+version:0.2
 qgisMinimumVersion:3.4
 
 author:Luiz Motta
@@ -22,7 +22,7 @@ icon:mapbiomas_alert.png
 experimental:True
 deprecated:False
 
-changelog: 0.1.1(2019-10-21)
+changelog: 0.2(2019-10-21)
   Change cars_id to cars
   - 0.1(2019-04-11)
   Start of plugin
