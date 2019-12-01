@@ -90,7 +90,7 @@ class MapBiomasAlert(QObject):
     @pyqtSlot()
     def showExtentProcess(self):
         geomExtent = QgsGeometry.fromRect( self.canvas.extent() )
-        self.mapCanvasGeom.zoom( geomExtent )
+        self.mapCanvasGeom.zoom( [ geomExtent ] )
 
     @pyqtSlot()
     def finishedSearch(self):
@@ -160,14 +160,14 @@ class MapBiomasAlertRequest(QObject):
         :params feature_id: Feature ID
         """
         # Actions functions
-        def highlight(feature_id):
+        def flash(feature_id):
             geom = self.alert.getFeature( feature_id ).geometry()
-            self.mapCanvasGeom.highlight( geom, self.alert )
+            self.mapCanvasGeom.flash( [ geom ], self.alert )
             return { 'isOk': True }
 
         def zoom(feature_id):
             geom = self.alert.getFeature( feature_id ).geometry()
-            self.mapCanvasGeom.zoom( geom, self.alert )
+            self.mapCanvasGeom.zoom( [ geom ], self.alert )
             return { 'isOk': True }
 
         def report(feature_id):
@@ -184,9 +184,9 @@ class MapBiomasAlertRequest(QObject):
             return { 'isOk': True }
 
         actionsFunc = {
-            'highlight': highlight,
-            'zoom':      zoom,
-            'report':    report
+            'flash':  flash,
+            'zoom':   zoom,
+            'report': report
         }
         if not nameAction in actionsFunc.keys():
             return { 'isOk': False, 'message': "Missing action '{}'".format( nameAction ) }

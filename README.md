@@ -12,6 +12,8 @@ This plugin lets you get alert from MapBiomas Project.
 Luiz Motta
 
 ## Changelog
+- 2019-12-01
+Added Flash
 - 2019-10-21
 Change cars_id to cars
 - 2019-10-03
