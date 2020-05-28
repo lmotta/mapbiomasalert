@@ -36,7 +36,7 @@ from qgis.core import (
 from .accesssite import AccessSite
 
 class API_MapbiomasAlert(QObject):
-    urlGeoserver = 'http://geoserver-mapbiomas.terras.agr.br/geoserver/alerts-platform/ows'
+    urlGeoserver = 'https://production.plataforma.alerta.mapbiomas.org/geoserver/ows'
     urlReport = 'http://plataforma.alerta.mapbiomas.org/reports'
     def __init__(self):
         super().__init__()
@@ -125,7 +125,7 @@ class API_MapbiomasAlert(QObject):
             'service': 'WFS',
             'version': '1.0.0',
             'request': 'GetFeature',
-            'typeName': 'alerts-platform:viw_relatorio_validacao',
+            'typeName': 'mapbiomas-alertas:viw_relatorio_validacao',
             'outputFormat': 'application/json',
             'cql_filter': "INTERSECTS(geom,{})".format( wktGeom )
         }
