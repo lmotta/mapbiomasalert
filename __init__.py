@@ -41,7 +41,7 @@ class MBAlertPlugin(QObject):
         super().__init__()
         self.iface = iface
         self.name = u"MapBiomas Alert "
-        self.mbalert = None
+        self.mbalert = MapBiomasAlert( self.iface )
 
     def initGui(self):
         name = 'MapBiomas Alert '
@@ -56,14 +56,13 @@ class MBAlertPlugin(QObject):
         self.iface.addToolBarIcon( self.action )
         self.iface.addPluginToMenu( self.name, self.action )
 
-        self.mbalert = MapBiomasAlert( self.iface, self.action )
+        self.mbalert.register()
 
     def unload(self):
         self.iface.removeToolBarIcon( self.action )
-        self.iface.removePluginRasterMenu( self.name, self.action)
-        del self.mbalert
-        self.mbalert = None
+        self.iface.removePluginRasterMenu( self.name, self.action )
         del self.action
+        del self.mbalert
 
     @pyqtSlot(bool)
     def run(self, checked):
