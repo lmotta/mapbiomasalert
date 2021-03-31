@@ -193,11 +193,11 @@ class MapBiomasAlertRequest(QObject):
         return actionsFunc[ nameAction ]( feature_id )
 
     def requestPopulateCatalog(self):
-        def getWktExtent():
+        def getStringExtent():
             crsCanvas = self.canvas.mapSettings().destinationCrs()
             ct = QgsCoordinateTransform( crsCanvas, self.crsCatalog, self.project )
-            extent = self.canvas.extent() if crsCanvas == self.crsCatalog else ct.transform( self.canvas.extent() )
-            return extent.asWktPolygon()
+            e = self.canvas.extent() if crsCanvas == self.crsCatalog else ct.transform( self.canvas.extent() )
+            return f"{e.xMinimum()},{e.yMinimum()},{e.xMaximum()},{e.yMaximum()}"
         
         def populate(features):
             provider = self.alert.dataProvider()
@@ -242,7 +242,7 @@ class MapBiomasAlertRequest(QObject):
         self.response = None
         self.calculateMetadata = True
         self.message.emit( Qgis.Info, 'Request features...')
-        url = self.apiMB.getUrlAlerts( getWktExtent() )
+        url = self.apiMB.getUrlAlerts( getStringExtent() )
         self.apiMB.getAlerts( url, finished )
         self.calculateMetadata = False
         if self.response['isOk']:

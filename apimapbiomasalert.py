@@ -36,7 +36,7 @@ from qgis.core import (
 from .accesssite import AccessSite
 
 class API_MapbiomasAlert(QObject):
-    urlGeoserver = 'https://production.plataforma.alerta.mapbiomas.org/geoserver/ows'
+    urlGeoserver = 'https://production.alerta.mapbiomas.org/geoserver/gwc/service'
     urlReport = 'http://plataforma.alerta.mapbiomas.org/reports'
     def __init__(self):
         super().__init__()
@@ -120,14 +120,17 @@ class API_MapbiomasAlert(QObject):
         self.access.abortReply.emit()
     
     @staticmethod
-    def getUrlAlerts(wktGeom):
+    def getUrlAlerts(strExtent):
+        sr = 'EPSG:4674'
         params = {
             'service': 'WFS',
-            'version': '1.0.0',
             'request': 'GetFeature',
-            'typeName': 'mapbiomas-alertas:viw_relatorio_validacao',
+            'typeName': 'mapbiomas-alertas:dashboard_alerts-main-map',
+            'srsname': sr,
+            #'propertyName': 'alert_code,area_ha,detected_at,rural_properties_json,geom',
             'outputFormat': 'application/json',
-            'cql_filter': "INTERSECTS(geom,{})".format( wktGeom )
+            'bbox': f"{strExtent},{sr}"
+            # 'cql_filter': f"INTERSECTS(geom,{wktGeom})"
         }
-        params = '&'.join( [ "{k}={v}".format( k=k, v=params[ k ] ) for k in params.keys() ] )
-        return "{url}?{params}".format( url=API_MapbiomasAlert.urlGeoserver, params=params )
+        params = '&'.join( [ f"{k}={v}" for k, v in params.items() ] )
+        return f"{API_MapbiomasAlert.urlGeoserver}?{params}"
