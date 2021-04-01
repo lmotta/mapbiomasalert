@@ -55,7 +55,7 @@ from .mapbiomasalert_layer_api import DbAlerts, API_MapbiomasAlert
 
 
 class MapBiomasAlertWidget(QWidget):
-    def __init__(self, alert, api):
+    def __init__(self, layer):
         def getIcons():
             fIcon = self.style().standardIcon
             return {
@@ -149,7 +149,9 @@ class MapBiomasAlertWidget(QWidget):
             return params
 
         super().__init__()
-        self.alert, self.api = alert, api
+        self.alert = DbAlerts( layer )
+        self.api = API_MapbiomasAlert()
+        self.api.alerts.connect( self.alert.addFeatures )
         self.msgBar = QgsUtils.iface.messageBar()
         self.icons = getIcons()
         self.textSearch = { 'apply': 'Search', 'cancel': 'Cancel'}
@@ -181,9 +183,8 @@ class MapBiomasAlertWidget(QWidget):
 
 
 class LayerMapBiomasAlertWidgetProvider(QgsLayerTreeEmbeddedWidgetProvider):
-    def __init__(self, alert, api ):
+    def __init__(self):
         super().__init__()
-        self.alert, self.api = alert, api
 
     def id(self):
         return self.__class__.__name__
@@ -192,7 +193,7 @@ class LayerMapBiomasAlertWidgetProvider(QgsLayerTreeEmbeddedWidgetProvider):
         return "Layer MapBiomas Alert"
 
     def createWidget(self, layer, widgetIndex):
-        return MapBiomasAlertWidget( self.alert, self.api )
+        return MapBiomasAlertWidget( layer )
 
     def supportsLayer(self, layer):
         return layer.customProperty( MapBiomasAlert.MODULE, 0)
@@ -205,12 +206,10 @@ class MapBiomasAlert(QObject):
         self.project = QgsProject.instance()
         self.msgBar = iface.messageBar()
         self.widgetProvider = None
-        self.alert = DbAlerts()
-        self.api = API_MapbiomasAlert()
-        self.api.alerts.connect( self.alert.addFeatures )
+        self.layer = None
 
     def register(self):
-        self.widgetProvider = LayerMapBiomasAlertWidgetProvider(self.alert, self.api)
+        self.widgetProvider = LayerMapBiomasAlertWidgetProvider()
         registry = QgsGui.layerTreeEmbeddedWidgetRegistry()
         if bool( registry.provider( self.widgetProvider.id() ) ):
             registry.removeProvider( self.widgetProvider.id() )
@@ -224,11 +223,7 @@ class MapBiomasAlert(QObject):
         self.project.addMapLayer( layer )
 
     def run(self):
-        if self.alert.layer:
-            msg = 'Already exists alert layer'
-            self.msgBar.pushMessage( self.MODULE, msg, Qgis.Warning, 3 )
-            return
         # NEED register(call out)
-        self.alert.setLayer()
-        self.addLayerRegisterProperty( self.alert.layer )
+        layer = DbAlerts.createLayer()
+        self.addLayerRegisterProperty( layer )
         

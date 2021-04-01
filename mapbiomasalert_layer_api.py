@@ -270,9 +270,9 @@ class DbAlerts(QObject):
         'carCode': 'string(-1)',
     }
     CRS = QgsCoordinateReferenceSystem('EPSG:4674')
-    def __init__(self):
+    def __init__(self, layer):
         super().__init__()
-        self.layer, self.provider  = None, None
+        self.layer = layer
         self.project = QgsProject.instance()
         self.project.layerWillBeRemoved.connect( self.removeLayer )
         #self.styleFile = os.path.join( os.path.dirname( __file__ ), 'alert.qml' )
@@ -297,20 +297,18 @@ class DbAlerts(QObject):
         
         return item
 
-    def setLayer(self, startDetectedAt='', endDetectedAt=''):
-        name = f"Alert {startDetectedAt} .. {endDetectedAt}"
-        if len( startDetectedAt) == 0:
-            l_fields = [ f"field={k}:{v}" for k,v in self.FIELDSDEF.items() ]
-            l_fields.insert( 0, f"Multipolygon?crs={self.CRS.authid().lower()}" )
-            l_fields.append( "index=yes" )
-            uri = '&'.join( l_fields )
-            self.layer =  QgsVectorLayer( uri, name, 'memory' )
-            self.provider = self.layer.dataProvider()
-            self.layerId = self.layer.id()
-            #self.layer.loadNamedStyle( self.styleFile )
-            return
+    @staticmethod
+    def createLayer():
+        name = 'Alert ..'
+        l_fields = [ f"field={k}:{v}" for k,v in DbAlerts.FIELDSDEF.items() ]
+        l_fields.insert( 0, f"Multipolygon?crs={DbAlerts.CRS.authid().lower()}" )
+        l_fields.append( "index=yes" )
+        uri = '&'.join( l_fields )
+        return QgsVectorLayer( uri, name, 'memory' )
 
-        self.provider.truncate()
+    def setLayer(self, startDetectedAt, endDetectedAt):
+        name = f"Alert {startDetectedAt} .. {endDetectedAt}"
+        self.layer.dataProvider().truncate()
         self.layer.setName( name )
         self.layer.updateExtents()
         self.layer.triggerRepaint()
@@ -328,8 +326,9 @@ class DbAlerts(QObject):
             feat = QgsFeature()
             feat.setAttributes( atts )
             feat.setGeometry( item['geom'])
-            self.provider.addFeature( feat )
+            provider.addFeature( feat )
 
+        provider = self.layer.dataProvider()
         for item in data:
             add( item )
         self.layer.updateExtents()
@@ -338,5 +337,5 @@ class DbAlerts(QObject):
     @pyqtSlot(str)
     def removeLayer(self, layerId):
         if self.layer and layerId == self.layer.id():
-            self.provider.truncate()
-            self.layer, self.provider  = None, None
+            self.layer.dataProvider().truncate()
+            self.layer = None
