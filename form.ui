@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>760</width>
-    <height>675</height>
+    <width>777</width>
+    <height>817</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -26,6 +26,13 @@
    <string>Item</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
+   <item>
+    <widget class="QLabel" name="lblMessage">
+     <property name="text">
+      <string>message</string>
+     </property>
+    </widget>
+   </item>
    <item>
     <widget class="QTabWidget" name="tabAlert">
      <property name="sizePolicy">
@@ -101,13 +108,6 @@
        <string>Images</string>
       </attribute>
       <layout class="QVBoxLayout" name="layoutMetadata">
-       <item>
-        <widget class="QLabel" name="lblMessage">
-         <property name="text">
-          <string>message</string>
-         </property>
-        </widget>
-       </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
@@ -190,6 +190,19 @@
       </layout>
      </widget>
     </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer_3">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>
