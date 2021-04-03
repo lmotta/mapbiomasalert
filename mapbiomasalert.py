@@ -52,6 +52,7 @@ from qgis.gui import QgsGui, QgsMessageBar, QgsLayerTreeEmbeddedWidgetProvider
 from qgis import utils as QgsUtils
 
 from .mapbiomasalert_layer_api import DbAlerts, API_MapbiomasAlert
+from .form import setForm as FORM_setForm
 
 
 class MapBiomasAlertWidget(QWidget):
@@ -129,7 +130,8 @@ class MapBiomasAlertWidget(QWidget):
                 self.toDate.setMinimumDate( newDate.addDays(+1) )
                 self.fromDate.dateChanged.connect( changedFromDate )
 
-            d2 = QDate.currentDate()
+            #d2 = QDate.currentDate()
+            d2 = QDate(2020, 4, 1)
             d1 = d2.addMonths( -1 )
             self.fromDate.setDate( d1 )
             self.fromDate.setMaximumDate( d2.addDays( -1 ) )
@@ -142,10 +144,12 @@ class MapBiomasAlertWidget(QWidget):
             self.numDays.valueChanged.connect( changedNumDay )
 
         super().__init__()
+        self.msgBar = QgsUtils.iface.messageBar()
         self.alert = DbAlerts( layer )
         self.api = API_MapbiomasAlert()
+        self.api.message.connect( self.msgBar.pushMessage )
         self.api.alerts.connect( self.alert.addFeatures )
-        self.msgBar = QgsUtils.iface.messageBar()
+        self.api.finishedAlert.connect( self.finishedAlert )
         self.icons = getIcons()
         self.textSearch = { 'apply': 'Search', 'cancel': 'Cancel'}
         setupUI()
@@ -155,10 +159,20 @@ class MapBiomasAlertWidget(QWidget):
 
     @pyqtSlot(bool)
     def _onSearch(self, checked):
+        if self.api.taskAlerts:
+            self.api.cancelAlerts()
+            self.search.setIcon( self.icons['apply'] )
+            return
+        self.search.setIcon( self.icons['cancel'] )
         fromDate = self.fromDate.date().toString( Qt.ISODate )
         toDate = self.toDate.date().toString( Qt.ISODate )
         self.alert.setLayer( fromDate, toDate )
         self.api.getAlerts( self.alert, fromDate, toDate )
+
+    @pyqtSlot()
+    def finishedAlert(self):
+        self.search.setIcon( self.icons['apply'] )
+
 
 
 class LayerMapBiomasAlertWidgetProvider(QgsLayerTreeEmbeddedWidgetProvider):
@@ -175,7 +189,7 @@ class LayerMapBiomasAlertWidgetProvider(QgsLayerTreeEmbeddedWidgetProvider):
         return MapBiomasAlertWidget( layer )
 
     def supportsLayer(self, layer):
-        return layer.customProperty( MapBiomasAlert.MODULE, 0)
+        return bool( layer.customProperty( MapBiomasAlert.MODULE, 0) )
 
 
 class MapBiomasAlert(QObject):
@@ -186,6 +200,7 @@ class MapBiomasAlert(QObject):
         self.msgBar = iface.messageBar()
         self.widgetProvider = None
         self.layer = None
+        self.styleFile = os.path.join( os.path.dirname( __file__ ), 'mapbiomas_alert.qml' )
 
     def register(self):
         self.widgetProvider = LayerMapBiomasAlertWidgetProvider()
@@ -199,6 +214,8 @@ class MapBiomasAlert(QObject):
         layer.setCustomProperty('embeddedWidgets/count', totalEW + 1 )
         layer.setCustomProperty(f"embeddedWidgets/{totalEW}/id", self.widgetProvider.id() )
         layer.setCustomProperty( self.MODULE, 1)
+        layer.loadNamedStyle( self.styleFile )
+        FORM_setForm( layer )
         self.project.addMapLayer( layer )
 
     def run(self):

@@ -61,8 +61,8 @@ class DialogEmailPassword(QDialog):
                 w.setEchoMode( QLineEdit.Password )
                 layout.addWidget( w )
                 # Save
-                w = QCheckBox('Save(email/password)', self )
-                self.__dict__['save_email_pwd'] = w
+                w = QCheckBox('Register(email/password)', self )
+                self.__dict__['register_email_password'] = w
                 w.setToolTip('Save in QGIS Config')
                 layout.addWidget( w )
                 return layout
@@ -70,10 +70,10 @@ class DialogEmailPassword(QDialog):
             def createLayoutRegister():
                 layout = QHBoxLayout()
                 # Register
-                w = QRadioButton('Copy Clipboard(email/password)', self )
+                w = QRadioButton('Copy Clipboard register', self )
                 self.__dict__['clipboard'] = w
                 layout.addWidget( w )
-                w = QRadioButton('Clear(email/password)', self )
+                w = QRadioButton('Clear register', self )
                 self.__dict__['clear'] = w
                 layout.addWidget( w )
                 return layout
@@ -113,7 +113,7 @@ class DialogEmailPassword(QDialog):
         return self.clear.isChecked()
 
     def isCheckedSave(self):
-        return self.save_email_pwd.isChecked()
+        return self.register_email_password.isChecked()
 
     @staticmethod
     def getConfig(localSetting):
@@ -140,3 +140,39 @@ class DialogEmailPassword(QDialog):
         msg = f"{email}/{password}"
         clipboard = QApplication.clipboard()
         clipboard.setText( msg )
+
+
+def runDialogEmailPassword(title, api, localSetting):
+        msgBar =  QgsUtils.iface.messageBar()
+        api.message.connect(  msgBar.pushMessage )
+        params = DialogEmailPassword.getConfig( localSetting )
+        hasRegister = not params['email'] is None
+        if hasRegister:
+            api.setToken( **params )
+            if not api.tokenOk:
+               DialogEmailPassword.clearConfig()
+               hasRegister = False
+        dlg = DialogEmailPassword( title, hasRegister )
+        result = dlg.exec_()
+        if not result:
+            return
+        # Save clipboard or Clear
+        if hasRegister:
+            if dlg.isCheckedClipboard():
+                dlg.copy2Clipboard( **params )
+            if dlg.isCheckedClear():
+                dlg.clearConfig( localSetting )
+            return
+        # Get params and test token
+        params = dlg.getParams()
+        if not dlg.isValidEmail():
+            msgBar.pushMessage( f"Invalid email: {params['email']}", Qgis.Critical )
+            return
+        params['sendMessage'] = True
+        api.setToken( **params )
+        if not api.tokenOk:
+            return
+        if dlg.isCheckedSave():
+            del params['sendMessage']
+            params['localSetting'] = localSetting
+            dlg.setConfig( **params )

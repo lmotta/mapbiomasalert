@@ -34,10 +34,8 @@ from qgis.PyQt.QtWidgets import QAction, QToolButton, QMenu
 
 from qgis.core import Qgis, QgsApplication
 
-from qgis import utils as QgsUtils
-
 from .mapbiomasalert import MapBiomasAlert
-from .dialog_email_password import DialogEmailPassword
+from .dialog_email_password import DialogEmailPassword, runDialogEmailPassword
 from .mapbiomasalert_layer_api import API_MapbiomasAlert
 
 def classFactory(iface):
@@ -101,37 +99,5 @@ class MBAlertPlugin(QObject):
 
     @pyqtSlot(bool)
     def runConfig(self, checked):
-        msgBar =  QgsUtils.iface.messageBar()
-        self.api.message.connect(  msgBar.pushMessage )
-        params = DialogEmailPassword.getConfig( self.localSetting )
-        hasRegister = not params['email'] is None
-        if hasRegister:
-            self.api.setToken( **params )
-            if not self.api.tokenOk:
-               DialogEmailPassword.clearConfig()
-               hasRegister = False
-        dlg = DialogEmailPassword( 'MapBiomas Alert Email/Password', hasRegister )
-        result = dlg.exec_()
-        if not result:
-            return
-        # Save clipboard or Clear
-        if hasRegister:
-            if dlg.isCheckedClipboard():
-                dlg.copy2Clipboard( **params )
-            if dlg.isCheckedClear():
-                dlg.clearConfig( self.localSetting )
-            return
-        # Get params and test token
-        params = dlg.getParams()
-        if not dlg.isValidEmail():
-            msgBar.pushMessage( f"Invalid email: {params['email']}", Qgis.Critical )
-            return
-        params['sendMessage'] = True
-        self.api.setToken( **params )
-        if not self.api.tokenOk:
-            return
-        if dlg.isCheckedSave():
-            del params['sendMessage']
-            params['localSetting'] = self.localSetting
-            dlg.setConfig( **params )
-
+        title = 'MapBiomas Alert Email/Password'
+        runDialogEmailPassword( title, self.api, self.localSetting )

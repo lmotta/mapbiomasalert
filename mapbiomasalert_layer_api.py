@@ -136,10 +136,12 @@ class API_MapbiomasAlert(QObject):
     message = pyqtSignal(str, Qgis.MessageLevel)
     status = pyqtSignal(str)
     alerts = pyqtSignal(list)
+    finishedAlert = pyqtSignal()
     images = pyqtSignal(dict)
     def __init__(self):
         super().__init__()
         self.taskManager = QgsApplication.taskManager()
+        self.taskAlerts = None
         self.request = QgsBlockingNetworkRequest()
         API_MapbiomasAlert.NETWORKREQUEST.setHeader( QNetworkRequest.ContentTypeHeader, 'application/json')
         self.tokenOk = False
@@ -223,15 +225,22 @@ class API_MapbiomasAlert(QObject):
             return { 'total': offset + total }
 
         def finished(exception, dataResult=None):
-            if dataResult:
-                self.status.emit(f"Finished {dataResult['total']} alerts")
+            self.finishedAlert.emit()
+            self.taskAlerts = None
+            msg = f"Finished {dataResult['total']} alerts" if dataResult else ''
+            self.status.emit( msg )
 
         task = QgsTask.fromFunction('Alert Task', run, on_finished=finished )
         task.setDependentLayers( [ dbAlerts.layer ] )
+        self.taskAlerts = task
         self.taskManager.addTask( task )
         # Debug
         #r = run( task )
         #finished(None, r)
+
+    def cancelAlerts(self):
+        if self.taskAlerts:
+            self.taskAlerts.cancel()
 
     def getImages(self, alertId):
         def run(task):
