@@ -143,15 +143,22 @@ class DialogEmailPassword(QDialog):
 
 
 def runDialogEmailPassword(title, api, localSetting):
+        def checkHasRegister():
+            hasRegister = True
+            if api.tokenOk:
+                return hasRegister
+            params = DialogEmailPassword.getConfig( localSetting )
+            hasRegister = not params['email'] is None
+            if hasRegister:
+                api.setToken( **params )
+                if not api.tokenOk:
+                    DialogEmailPassword.clearConfig()
+                    hasRegister = False
+            return hasRegister
+
         msgBar =  QgsUtils.iface.messageBar()
         api.message.connect(  msgBar.pushMessage )
-        params = DialogEmailPassword.getConfig( localSetting )
-        hasRegister = not params['email'] is None
-        if hasRegister:
-            api.setToken( **params )
-            if not api.tokenOk:
-               DialogEmailPassword.clearConfig()
-               hasRegister = False
+        hasRegister = checkHasRegister()
         dlg = DialogEmailPassword( title, hasRegister )
         result = dlg.exec_()
         if not result:
