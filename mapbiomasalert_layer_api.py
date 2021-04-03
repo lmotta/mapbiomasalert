@@ -142,7 +142,7 @@ class API_MapbiomasAlert(QObject):
         self.taskManager = QgsApplication.taskManager()
         self.request = QgsBlockingNetworkRequest()
         API_MapbiomasAlert.NETWORKREQUEST.setHeader( QNetworkRequest.ContentTypeHeader, 'application/json')
-        self.isOk = False
+        self.tokenOk = False
 
     def _request(self, data):
         data = data.replace('\n', '').encode('utf-8')
@@ -159,22 +159,23 @@ class API_MapbiomasAlert(QObject):
             q = q.replace( f"_{v}_", str( values[ v] ) )
         return q
 
-    def setToken(self, email, password):
+    def setToken(self, email, password, sendMessage=False):
         values = { 'email': email, 'password': password }
         data = self._replaceQuery( values, self.Q_TOKEN )
         response = self._request( data )
         if not response:
-            self.message.emit( self.request.errorMessage(), Qgis.Warning )
-            self.isOk = False
+            self.message.emit( self.request.errorMessage(), Qgis.Critical )
+            self.tokenOk = False
             return
         if not response['data']['createToken']:
-            self.message.emit( 'Invalid email or password', Qgis.Warning )
-            self.isOk = False
+            if sendMessage:
+                self.message.emit( 'Invalid email or password', Qgis.Critical )
+            self.tokenOk = False
             return
         token = response['data']['createToken']['token']
         value = f"Bearer {token}"
         API_MapbiomasAlert.NETWORKREQUEST.setRawHeader( b'Authorization', value.encode('utf-8') )
-        self.isOk = True
+        self.tokenOk = True
 
     def getAlerts(self, dbAlerts, startDetectedAt, endDetectedAt):
         def run(task):

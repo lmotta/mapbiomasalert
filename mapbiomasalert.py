@@ -22,7 +22,7 @@ email                : motta.luiz@gmail.com
 import json, os
 
 from qgis.PyQt.QtCore import (
-    Qt, QSettings, QLocale,
+    Qt,
     QObject, pyqtSlot, pyqtSignal,
     QUrl,
     QDate
@@ -32,7 +32,7 @@ from qgis.PyQt.QtWidgets import (
     QLabel, QDateEdit, QSpinBox, QSpacerItem, QSizePolicy,
     QVBoxLayout, QHBoxLayout,
     QApplication, # widgets = QApplication.instance().allWidgets()
-    QDialog, QStyle
+    QStyle
 )
 from qgis.PyQt.QtGui import (
     QColor, QPixmap, QIcon,
@@ -141,13 +141,6 @@ class MapBiomasAlertWidget(QWidget):
             self.toDate.dateChanged.connect( changedToDate )
             self.numDays.valueChanged.connect( changedNumDay )
 
-        def getSetting():
-            params = {}
-            s = QSettings()
-            for k in ('path', 'email', 'password'):
-                params[ k ] = s.value( self.localSetting.format( k ), None )
-            return params
-
         super().__init__()
         self.alert = DbAlerts( layer )
         self.api = API_MapbiomasAlert()
@@ -157,13 +150,6 @@ class MapBiomasAlertWidget(QWidget):
         self.textSearch = { 'apply': 'Search', 'cancel': 'Cancel'}
         setupUI()
         populateDates()
-        # Register
-        # self.localSetting = "mapbiomasalert/{}".format('{}')
-        # p = getSetting()
-        # if p['email']:
-        #     pass
-        # if p['password']:
-        #     pass
         self.api.message.connect( self.msgBar.pushMessage )
         self.api.status.connect( self.status.setText )
 
@@ -217,7 +203,7 @@ class MapBiomasAlert(QObject):
 
     def run(self):
         api = API_MapbiomasAlert()
-        api.setToken('luiz.motta@ibama.gov.br', 'Lmotta@21')
+        # api.setToken('luiz.motta@ibama.gov.br', 'Lmotta@21')
         # NEED register(call out)
         layer = DbAlerts.createLayer()
         self.addLayerRegisterProperty( layer )

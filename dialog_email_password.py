@@ -19,7 +19,12 @@ email                : motta.luiz@gmail.com
  *                                                                         *
  ***************************************************************************/
 """
+from qgis.PyQt.QtCore import (
+    QSettings,
+    QRegExp, QRegularExpression,
+)
 from qgis.PyQt.QtWidgets import (
+    QApplication,
     QDialog,
     QLabel, QLineEdit,
     QCheckBox, QRadioButton,
@@ -28,16 +33,14 @@ from qgis.PyQt.QtWidgets import (
 )
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 
-from qgis.PyQt.QtCore import (
-    QRegExp, QRegularExpression,
-)
 from qgis.gui import QgsPasswordLineEdit
 
 from qgis import utils as QgsUtils
 
+
+
 class DialogEmailPassword(QDialog):
-    TITLE = 'Config email/password'
-    def __init__(self, hasRegister):
+    def __init__(self, title, hasRegister):
         def setupUI():
             def createLayoutPassword():
                 layout = QHBoxLayout()
@@ -70,8 +73,8 @@ class DialogEmailPassword(QDialog):
                 w = QRadioButton('Copy Clipboard(email/password)', self )
                 self.__dict__['clipboard'] = w
                 layout.addWidget( w )
-                w = QRadioButton('Clean(email/password)', self )
-                self.__dict__['clean'] = w
+                w = QRadioButton('Clear(email/password)', self )
+                self.__dict__['clear'] = w
                 layout.addWidget( w )
                 return layout
 
@@ -88,28 +91,52 @@ class DialogEmailPassword(QDialog):
             self.setLayout( lyt )
 
         super().__init__( QgsUtils.iface.mainWindow() )
-        self.setWindowTitle( self.TITLE )
+        self.setWindowTitle( title )
         self.emailExpEdit = '\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,4}\\b'
         self.emailExpMath = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
         setupUI()
+
+    def getParams(self):
+        params = {}
+        for k in ('email', 'password'):
+            params[ k ] = self.__dict__[ k ].text()
+        return params
 
     def isValidEmail(self):
         rx = QRegExp( self.emailExpMath )
         return rx.exactMatch( self.email.text() )
 
+    def isCheckedClipboard(self):
+        return self.clipboard.isChecked()
 
-hasRegister = False
+    def isCheckedClear(self):
+        return self.clear.isChecked()
 
-dlg = DialogEmailPassword( hasRegister )
-result = dlg.exec_()
+    def isCheckedSave(self):
+        return self.save_email_pwd.isChecked()
 
-print(result)
-if hasRegister:
-    print( dlg.clipboard.isChecked() )
-    print( dlg.clean.isChecked() )
-else:
-    print( dlg.password.text() )
-    print( dlg.email.text() )
-    print( dlg.save_email_pwd.isChecked() )
+    @staticmethod
+    def getConfig(localSetting):
+        params = {}
+        s = QSettings()
+        for k in ('email', 'password'):
+            params[ k ] = s.value( localSetting.format( k ), None )
+        return params
 
-a = 1
+    @staticmethod
+    def setConfig(localSetting, email, password):
+        s = QSettings()
+        s.setValue( localSetting.format('email'), email )
+        s.setValue( localSetting.format('password'), password )
+
+    @staticmethod
+    def clearConfig(localSetting):
+        s = QSettings()
+        s.remove( localSetting.format('email') )
+        s.remove( localSetting.format('password') )
+
+    @staticmethod
+    def copy2Clipboard(email, password):
+        msg = f"{email}/{password}"
+        clipboard = QApplication.clipboard()
+        clipboard.setText( msg )
