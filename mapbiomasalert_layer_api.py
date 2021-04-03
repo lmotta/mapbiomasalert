@@ -73,7 +73,6 @@ class Geometry_WKB():
 
 
 class API_MapbiomasAlert(QObject):
-    URL = QUrl('https://plataforma.alerta.mapbiomas.org/api/graphql')
     Q_TOKEN = """
     {
         "query": "mutation($email: String!, $password: String!)
@@ -133,6 +132,7 @@ class API_MapbiomasAlert(QObject):
     }
     """
     LIMIT = 50
+    NETWORKREQUEST = QNetworkRequest(  QUrl('https://plataforma.alerta.mapbiomas.org/api/graphql') )
     message = pyqtSignal(str, Qgis.MessageLevel)
     status = pyqtSignal(str)
     alerts = pyqtSignal(list)
@@ -141,13 +141,12 @@ class API_MapbiomasAlert(QObject):
         super().__init__()
         self.taskManager = QgsApplication.taskManager()
         self.request = QgsBlockingNetworkRequest()
-        self.nr = QNetworkRequest ( self.URL )
-        self.nr.setHeader( QNetworkRequest.ContentTypeHeader, 'application/json')
+        API_MapbiomasAlert.NETWORKREQUEST.setHeader( QNetworkRequest.ContentTypeHeader, 'application/json')
         self.isOk = False
 
     def _request(self, data):
         data = data.replace('\n', '').encode('utf-8')
-        err = self.request.post( self.nr, data )
+        err = self.request.post( API_MapbiomasAlert.NETWORKREQUEST, data )
         if not err == QgsBlockingNetworkRequest.NoError:
             return None
         ba = self.request.reply().content() # QByteArray
@@ -174,7 +173,7 @@ class API_MapbiomasAlert(QObject):
             return
         token = response['data']['createToken']['token']
         value = f"Bearer {token}"
-        self.nr.setRawHeader( b'Authorization', value.encode('utf-8') )
+        API_MapbiomasAlert.NETWORKREQUEST.setRawHeader( b'Authorization', value.encode('utf-8') )
         self.isOk = True
 
     def getAlerts(self, dbAlerts, startDetectedAt, endDetectedAt):
@@ -183,7 +182,13 @@ class API_MapbiomasAlert(QObject):
                 data = self._replaceQuery( values, self.Q_ALLPUBLISHEDALERTS )
                 response = self._request( data )
                 if not response:
-                    self.message.emit( self.request.errorMessage(), Qgis.Critical )
+                    msg = f"MapBiomas Alert: {self.request.errorMessage()}"
+                    self.message.emit( msg, Qgis.Critical )
+                    return -1
+                if 'errors' in response:
+                    l_messages = [ v['message'] for v in response['errors'] ]
+                    msg = f"MapBiomas Alert: {','.join( l_messages )}"
+                    self.message.emit( msg,  Qgis.Critical )
                     return -1
                 values = response['data']['allPublishedAlerts']
                 values = [ dbAlerts.transformItem( v ) for v in values ]

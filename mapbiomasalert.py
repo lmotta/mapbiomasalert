@@ -164,10 +164,8 @@ class MapBiomasAlertWidget(QWidget):
         #     pass
         # if p['password']:
         #     pass
-        self.api.message.connect( self.message )
+        self.api.message.connect( self.msgBar.pushMessage )
         self.api.status.connect( self.status.setText )
-
-        self.api.setToken('luiz.motta@ibama.gov.br', 'Lmotta@21')
 
     @pyqtSlot(bool)
     def _onSearch(self, checked):
@@ -175,11 +173,6 @@ class MapBiomasAlertWidget(QWidget):
         toDate = self.toDate.date().toString( Qt.ISODate )
         self.alert.setLayer( fromDate, toDate )
         self.api.getAlerts( self.alert, fromDate, toDate )
-
-    @pyqtSlot(str, Qgis.MessageLevel)
-    def message(self, message, level):
-        self.msgBar.popWidget()
-        self.msgBar.pushMessage( message, level )
 
 
 class LayerMapBiomasAlertWidgetProvider(QgsLayerTreeEmbeddedWidgetProvider):
@@ -223,6 +216,8 @@ class MapBiomasAlert(QObject):
         self.project.addMapLayer( layer )
 
     def run(self):
+        api = API_MapbiomasAlert()
+        api.setToken('luiz.motta@ibama.gov.br', 'Lmotta@21')
         # NEED register(call out)
         layer = DbAlerts.createLayer()
         self.addLayerRegisterProperty( layer )
