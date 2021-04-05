@@ -174,7 +174,6 @@ class MapBiomasAlertWidget(QWidget):
         self.search.setIcon( self.icons['apply'] )
 
 
-
 class LayerMapBiomasAlertWidgetProvider(QgsLayerTreeEmbeddedWidgetProvider):
     def __init__(self):
         super().__init__()

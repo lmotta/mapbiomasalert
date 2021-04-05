@@ -22,6 +22,7 @@ Updated: 2020-11-24
 """
 import os
 
+from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import QLabel, QLineEdit
 from qgis.PyQt.QtGui import QPixmap
 
@@ -46,6 +47,9 @@ def getApi(pluginName):
 
 widgets = None
 api = None
+pixmap = QPixmap()
+f_alertCode, c_alertCode = None, None
+
 
 def setForm(layer):
     """
@@ -62,7 +66,7 @@ def setForm(layer):
     config.setInitFilePath( vfile)
     layer.setEditFormConfig(config)        
 
-def populateForm(feature):
+def populateForm(dialog, feature):
     """
     :param widgets: List of widgets
     :feature: Feature from open table(Form) in QGIS
@@ -89,9 +93,20 @@ def populateForm(feature):
             widgets[f"leUrl{k}"].setText( d['url'] )
             widgets[f"leUrl{k}"].setCursorPosition(0)
         message('')
+        if not c_alertCode == f_alertCode:
+            try:
+                dialog.setFeature( feature ) # Removal may occur of dialog
+            except RuntimeError:
+                pass
 
     global widgets
-    global api
+    message('Fetching images...')
+    # . Clear
+    global pixmap
+    for k in ('Before', 'After'):
+        widgets[ f"le{k}" ].setText('')
+        widgets[ f"lblImage{k}" ].setPixmap( pixmap )
+        widgets[ f"leUrl{k}" ].setText('')
     # tabAlert
     msg = f"Alert: {feature['alertCode']} ({feature['detectedAt']}) | {feature['areaHa']} ha"
     widgets['leAlert'].setText( msg )
@@ -110,37 +125,42 @@ def populateForm(feature):
     widgets['leCar'].setCursorPosition(0)
 
     # tabImages
-    message('Fetching images...')
-    pixmap = QPixmap()
-    for k in ('Before', 'After'):
-        widgets[ f"le{k}" ].setText('')
-        widgets[ f"lblImage{k}" ].setPixmap( pixmap )
-        widgets[ f"leUrl{k}" ].setText('')
-
+    # . Populate by API
+    global api
     if api is None:
         r = getApi('mapbiomasalert')
         if not r['isOk']:
             message( r['message'], Qgis.Critical )
-            return
+            return 
         api = r['api']
         api.message.connect( message )
         api.images.connect( populateImages )
-    api.getImages( feature['alertCode'] )
+
+    global c_alertCode, f_alertCode
+    c_alertCode = feature['alertCode']
+    if api.taskImage:
+        return
+    f_alertCode = c_alertCode
+    api.getImages( f_alertCode )
 
 def loadForm(dialog, layer, feature):
     if feature.fieldNameIndex('alertCode') == -1:
         return
     global widgets
-    widgets = {
-        'leAlert': dialog.findChild( QLineEdit, 'leAlert' ),
-        'leSource': dialog.findChild( QLineEdit, 'leSource' ),
-        'leCar': dialog.findChild( QLineEdit, 'leCar' ),
-        'lblMessage': dialog.findChild( QLabel, 'lblMessage' ),
-        'leBefore': dialog.findChild( QLineEdit, 'leBefore' ),
-        'lblImageBefore': dialog.findChild( QLabel, 'lblImageBefore' ),
-        'leUrlBefore': dialog.findChild( QLineEdit, 'leUrlBefore' ),
-        'leAfter': dialog.findChild( QLineEdit, 'leAfter' ),
-        'lblImageAfter': dialog.findChild( QLabel, 'lblImageAfter' ),
-        'leUrlAfter': dialog.findChild( QLineEdit, 'leUrlAfter' ),
-    }
-    populateForm( feature )
+    if not widgets:
+        widgets = {
+            'leAlert': dialog.findChild( QLineEdit, 'leAlert' ),
+            'leSource': dialog.findChild( QLineEdit, 'leSource' ),
+            'leCar': dialog.findChild( QLineEdit, 'leCar' ),
+            'lblMessage': dialog.findChild( QLabel, 'lblMessage' ),
+            'leBefore': dialog.findChild( QLineEdit, 'leBefore' ),
+            'lblImageBefore': dialog.findChild( QLabel, 'lblImageBefore' ),
+            'leUrlBefore': dialog.findChild( QLineEdit, 'leUrlBefore' ),
+            'leAfter': dialog.findChild( QLineEdit, 'leAfter' ),
+            'lblImageAfter': dialog.findChild( QLabel, 'lblImageAfter' ),
+            'leUrlAfter': dialog.findChild( QLineEdit, 'leUrlAfter' ),
+        }
+        widgets['lblImageBefore'].setScaledContents( True )
+        widgets['lblImageAfter'].setScaledContents( True )
+    populateForm( dialog, feature )
+    # QgsAttributeForm

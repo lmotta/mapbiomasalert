@@ -27,13 +27,6 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
    <item>
-    <widget class="QLabel" name="lblMessage">
-     <property name="text">
-      <string>message</string>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="QTabWidget" name="tabAlert">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -108,6 +101,13 @@
        <string>Images</string>
       </attribute>
       <layout class="QVBoxLayout" name="layoutMetadata">
+       <item>
+        <widget class="QLabel" name="lblMessage">
+         <property name="text">
+          <string>message</string>
+         </property>
+        </widget>
+       </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>

@@ -141,7 +141,7 @@ class API_MapbiomasAlert(QObject):
     def __init__(self):
         super().__init__()
         self.taskManager = QgsApplication.taskManager()
-        self.taskAlerts = None
+        self.taskAlerts, self.taskImage = None, None
         self.request = QgsBlockingNetworkRequest()
         API_MapbiomasAlert.NETWORKREQUEST.setHeader( QNetworkRequest.ContentTypeHeader, 'application/json')
         self.tokenOk = False
@@ -266,10 +266,12 @@ class API_MapbiomasAlert(QObject):
             return data
 
         def finished(exception, dataResult=None):
+            self.taskImage = None
             if dataResult:
                 self.images.emit( dataResult )
 
         task = QgsTask.fromFunction('Alert/Get Images Task', run, on_finished=finished )
+        self.taskImage = task
         self.taskManager.addTask( task )
         # Debug
         #r = run( task )
