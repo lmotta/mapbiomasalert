@@ -163,4 +163,4 @@ def loadForm(dialog, layer, feature):
         widgets['lblImageBefore'].setScaledContents( True )
         widgets['lblImageAfter'].setScaledContents( True )
     populateForm( dialog, feature )
-    # QgsAttributeForm
+
