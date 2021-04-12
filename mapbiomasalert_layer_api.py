@@ -20,7 +20,7 @@ email                : motta.luiz@gmail.com
  ***************************************************************************/
 """
 
-import json, binascii, os
+import json, binascii, os, csv
 
 from qgis.PyQt.QtCore import (
     QObject, QUrl,
@@ -32,11 +32,12 @@ from qgis.PyQt.QtGui import QPixmap
 from qgis.core import (
     Qgis, QgsProject, QgsApplication,
     QgsVectorLayer, QgsFeature, QgsGeometry,
+    QgsFeatureRequest,
     QgsCoordinateReferenceSystem, QgsCoordinateTransform,
     QgsBlockingNetworkRequest,
     QgsTask
 )
-
+from qgis import utils as QgsUtils
 
 
 class Geometry_WKB():
@@ -114,7 +115,7 @@ class API_MapbiomasAlert(QObject):
         "variables": {
             "limit": _limit_, "offset": _offset_ ,
             "startDetectedAt": "_startDetectedAt_", "endDetectedAt": "_endDetectedAt_",
-            "territoryIds": [ 17245 ]
+            "territoryIds": [ _territoryIds_ ]
         }
     }
     """
@@ -179,7 +180,7 @@ class API_MapbiomasAlert(QObject):
         API_MapbiomasAlert.NETWORKREQUEST.setRawHeader( b'Authorization', value.encode('utf-8') )
         self.tokenOk = True
 
-    def getAlerts(self, dbAlerts, startDetectedAt, endDetectedAt):
+    def getAlerts(self, dbAlerts, startDetectedAt, endDetectedAt, territoryIds):
         def run(task):
             def request(values):
                 data = self._replaceQuery( values, self.Q_ALLPUBLISHEDALERTS )
@@ -205,11 +206,14 @@ class API_MapbiomasAlert(QObject):
                 return " ".join( fields ) + " cars { carCode } geometry { geom }"
             
             fieldsName =  getFieldsName()
+            s_territoryIds = ','.join( [ str(v) for v in territoryIds ] )
             offset = 0
             while True:
                 values = {
                     'startDetectedAt': startDetectedAt, 'endDetectedAt': endDetectedAt,
-                    'limit': self.LIMIT, 'offset': offset, 'fields': fieldsName
+                    'territoryIds': s_territoryIds,
+                    'limit': self.LIMIT, 'offset': offset,
+                    'fields': fieldsName
                 }
                 total = request( values )
                 if task.isCanceled():
@@ -235,8 +239,8 @@ class API_MapbiomasAlert(QObject):
         self.taskAlerts = task
         self.taskManager.addTask( task )
         # Debug
-        #r = run( task )
-        #finished(None, r)
+        # r = run( task )
+        # finished(None, r)
 
     def cancelAlerts(self):
         if self.taskAlerts:
@@ -278,6 +282,70 @@ class API_MapbiomasAlert(QObject):
         #finished(None, r)
 
 
+class TerritoryBbox():
+    FIELDSDEF = {
+        'id': 'string(25)'
+    }
+    CRS = QgsCoordinateReferenceSystem('EPSG:4674')
+    CSV = 'territory_bbox.csv'
+    def __init__(self):
+        self.mapCanvas = QgsUtils.iface.mapCanvas()
+        self.taskManager = QgsApplication.taskManager()
+        self.threadMain = QgsApplication.instance().thread()
+        self.csv = os.path.join( os.path.dirname( __file__ ),  self.CSV )
+        self.project = QgsProject.instance()
+        self.layer  = None
+
+    def __del__(self):
+        if self.layer:
+            self.layer = None
+
+    def _createLayer(self):
+        name = self.CSV
+        l_fields = [ f"field={k}:{v}" for k,v in self.FIELDSDEF.items() ]
+        l_fields.insert( 0, f"polygon?crs={self.CRS.authid().lower()}" )
+        l_fields.append( "index=yes" )
+        uri = '&'.join( l_fields )
+        return QgsVectorLayer( uri, name, 'memory' )
+
+    def setLayer(self):
+        def run(task):
+            layer = self._createLayer()
+            provider = layer.dataProvider()
+            with open( self.csv ) as csv_file:
+                csv_reader = csv.reader( csv_file, delimiter=';')
+                for row in csv_reader:
+                    id, wkt = row[0], row[1]
+                    feat = QgsFeature()
+                    feat.setAttributes( [ id ] )
+                    geom = QgsGeometry.fromWkt( wkt )
+                    feat.setGeometry( geom )
+                    provider.addFeature( feat )
+            layer.moveToThread( self.threadMain )
+            return { 'layer': layer }
+
+        def finished(exception, dataResult=None):
+            if dataResult:
+                self.layer = dataResult['layer']
+
+        task = QgsTask.fromFunction('Alert Task', run, on_finished=finished )
+        self.taskManager.addTask( task )
+        # Debug
+        # Comment layer.moveToThread(self.threadMain )
+        # r = run( task, layer )
+        # finished(None, r)
+
+    def getIdsCanvas(self):
+        crs = self.project.crs()
+        extent = self.mapCanvas.extent()
+        if not crs  == self.CRS:
+            ct = QgsCoordinateTransform( crs, self.CRS, self.project )
+            extent = ct.transform( extent )
+        fr = QgsFeatureRequest().setFilterRect( extent ) 
+        features = self.layer.getFeatures( fr )
+        return [ feat['id'] for feat in features ]
+
+
 class DbAlerts(QObject):
     FIELDSDEF = {
         'alertCode': 'string(25)',
@@ -292,7 +360,6 @@ class DbAlerts(QObject):
         self.layer = layer
         self.project = QgsProject.instance()
         self.project.layerWillBeRemoved.connect( self.removeLayer )
-        #self.styleFile = os.path.join( os.path.dirname( __file__ ), 'alert.qml' )
 
     @staticmethod
     def transformItem(item):

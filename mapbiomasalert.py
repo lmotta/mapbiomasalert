@@ -51,12 +51,12 @@ from qgis.core import (
 from qgis.gui import QgsGui, QgsMessageBar, QgsLayerTreeEmbeddedWidgetProvider
 from qgis import utils as QgsUtils
 
-from .mapbiomasalert_layer_api import DbAlerts, API_MapbiomasAlert
+from .mapbiomasalert_layer_api import DbAlerts, API_MapbiomasAlert, TerritoryBbox
 from .form import setForm as FORM_setForm
 
 
 class MapBiomasAlertWidget(QWidget):
-    def __init__(self, layer):
+    def __init__(self, layer, layerTerritory):
         def getIcons():
             fIcon = self.style().standardIcon
             return {
@@ -150,11 +150,11 @@ class MapBiomasAlertWidget(QWidget):
         self.api.message.connect( self.msgBar.pushMessage )
         self.api.alerts.connect( self.alert.addFeatures )
         self.api.finishedAlert.connect( self.finishedAlert )
+        self.layerTerritory = layerTerritory
         self.icons = getIcons()
         self.textSearch = { 'apply': 'Search', 'cancel': 'Cancel'}
         setupUI()
         populateDates()
-        self.api.message.connect( self.msgBar.pushMessage )
         self.api.status.connect( self.status.setText )
 
     @pyqtSlot(bool)
@@ -167,7 +167,9 @@ class MapBiomasAlertWidget(QWidget):
         fromDate = self.fromDate.date().toString( Qt.ISODate )
         toDate = self.toDate.date().toString( Qt.ISODate )
         self.alert.setLayer( fromDate, toDate )
-        self.api.getAlerts( self.alert, fromDate, toDate )
+        ids = self.layerTerritory.getIdsCanvas()
+        self.status.setText('Fetch alert from map extent and dates')
+        self.api.getAlerts( self.alert, fromDate, toDate, ids )
 
     @pyqtSlot()
     def finishedAlert(self):
@@ -177,6 +179,8 @@ class MapBiomasAlertWidget(QWidget):
 class LayerMapBiomasAlertWidgetProvider(QgsLayerTreeEmbeddedWidgetProvider):
     def __init__(self):
         super().__init__()
+        self.layerTerritory = TerritoryBbox()
+        self.layerTerritory.setLayer()
 
     def id(self):
         return self.__class__.__name__
@@ -185,7 +189,7 @@ class LayerMapBiomasAlertWidgetProvider(QgsLayerTreeEmbeddedWidgetProvider):
         return "Layer MapBiomas Alert"
 
     def createWidget(self, layer, widgetIndex):
-        return MapBiomasAlertWidget( layer )
+        return MapBiomasAlertWidget( layer, self.layerTerritory )
 
     def supportsLayer(self, layer):
         return bool( layer.customProperty( MapBiomasAlert.MODULE, 0) )
