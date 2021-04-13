@@ -45,8 +45,6 @@ from qgis.core import (
     QgsCoordinateReferenceSystem, QgsCoordinateTransform,
     QgsVectorLayer, QgsFeature,
     QgsBlockingNetworkRequest,
-    QgsTask,
-
 )
 from qgis.gui import QgsGui, QgsMessageBar, QgsLayerTreeEmbeddedWidgetProvider
 from qgis import utils as QgsUtils
