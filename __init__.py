@@ -26,7 +26,6 @@ __revision__ = '$Format:%H$'
 
 
 import os
-from planet_explorer.extlibs.planet import api
 
 from qgis.PyQt.QtCore import QObject, Qt, pyqtSlot
 from qgis.PyQt.QtGui import QIcon

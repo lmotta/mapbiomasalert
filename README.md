@@ -12,6 +12,8 @@ This plugin lets you get alert from MapBiomas Project.
 Luiz Motta
 
 ## Changelog
+- 2021-05-31
+Fixed Bug (import planet)
 - 2021-04-12
 Used graphQL API and territory_bbox(filter IDs)
 - 2020-05-28

@@ -129,7 +129,7 @@ class MapBiomasAlertWidget(QWidget):
                 self.fromDate.dateChanged.connect( changedFromDate )
 
             #d2 = QDate.currentDate()
-            d2 = QDate(2020, 4, 1)
+            d2 = QDate.currentDate()
             d1 = d2.addMonths( -1 )
             self.fromDate.setDate( d1 )
             self.fromDate.setMaximumDate( d2.addDays( -1 ) )
